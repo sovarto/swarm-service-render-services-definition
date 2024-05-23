@@ -34228,7 +34228,7 @@ async function run() {
         const servicesDefinitionFile = core.getInput('services-definition', { required: true });
         const serviceName = core.getInput('service-name', { required: true });
         const image = core.getInput('image', { required: true });
-        const environmentVariablesString = core.getInput('environment-variables', { required: true });
+        const environmentVariablesString = core.getInput('environment-variables', { required: false });
         const servicesDefinitionPath = path.isAbsolute(servicesDefinitionFile) ?
             servicesDefinitionFile :
             path.join(process.env.GITHUB_WORKSPACE, servicesDefinitionFile);
