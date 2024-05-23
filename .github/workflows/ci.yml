@@ -51,6 +51,7 @@ jobs:
         with:
           image: 'nginx:latest'
           service-name: 'web'
+          services-definition: '.github/local-action-services-definition.tmpl.yaml'
 
       - name: Print Output
         id: output
