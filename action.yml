@@ -1,0 +1,30 @@
+name: 'Render Docker Swarm cluster services definition'
+description: 'Renders a Docker Swarm services cluster definition.'
+author: 'Sovarto GmbH'
+
+branding:
+  icon: 'cloud'
+  color: 'blue'
+
+inputs:
+  services-definition:
+    description: 'The file path to the services definition'
+    required: true
+    default: '.cluster/services-definition.tmpl.yaml'
+  service-name:
+    description: 'The name of the service inside the services definition file'
+    required: true
+  image:
+    description: 'The URI of the container image to insert into the services definition'
+    required: true
+  environment-variables:
+    description: 'Variables to add or update on the service. Each variable is of the form KEY=value, you can specify multiple variables with multi-line YAML strings.'
+    required: false
+
+outputs:
+  task-definition:
+    description: 'The path to the rendered task definition file'
+
+runs:
+  using: node20
+  main: dist/index.js
