@@ -1,7 +1,7 @@
 {
   "name": "@sovarto/swarm-service-render-services-definition",
   "description": "Renders a Docker Swarm services cluster definition.",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "author": "Sovarto GmbH",
   "private": true,
   "repository": {
