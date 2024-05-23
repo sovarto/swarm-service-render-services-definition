@@ -22,8 +22,8 @@ inputs:
     required: false
 
 outputs:
-  task-definition:
-    description: 'The path to the rendered task definition file'
+  services-definition:
+    description: 'The path to the rendered services definition file'
 
 runs:
   using: node20
