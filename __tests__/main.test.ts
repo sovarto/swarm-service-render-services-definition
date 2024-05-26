@@ -20,12 +20,19 @@ jest.mock('node:fs', () => ({
 
 describe('Render services definition', () => {
 
+    const originalEnv = process.env;
+
     beforeEach(() => {
         jest.clearAllMocks();
 
+        process.env = { ...originalEnv };
         process.env = Object.assign(process.env, { GITHUB_WORKSPACE: __dirname });
         process.env = Object.assign(process.env, { RUNNER_TEMP: '/home/runner/work/_temp' });
 
+    });
+
+    afterEach(() => {
+        process.env = originalEnv;
     });
 
     test(
@@ -172,6 +179,47 @@ services:
       A: 'bar'
       B: 'world'
       DONT: 'panic'
+    external_route:
+      subdomain: 'web'
+      port: 1234
+    image: 'nginx:latest'
+`);
+        expect(core.setOutput).toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
+    });
+
+    test('renders a services definition with unspecified but available environments', async () => {
+        const mockGetInput = core.getInput as jest.Mock;
+        mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                    .mockReturnValueOnce('web')                  // service-name
+                    .mockReturnValueOnce('nginx:latest')         // image
+
+        const mockReadFileSync = fs.readFileSync as jest.Mock;
+        mockReadFileSync.mockReturnValue(`
+services:
+  web:
+    environment:
+      - A
+    external_route:
+      subdomain: 'web'
+      port: 1234
+`);
+
+        process.env.A = 'bar'
+
+        await run();
+
+        expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
+            tmpdir: '/home/runner/work/_temp',
+            prefix: 'services-definition-',
+            postfix: '.yaml',
+            keep: true,
+            discardDescriptor: true
+        });
+        expect(fs.writeFileSync).toHaveBeenNthCalledWith(1, 'new-services-definition-file-name',
+            `services:
+  web:
+    environment:
+      A: 'bar'
     external_route:
       subdomain: 'web'
       port: 1234

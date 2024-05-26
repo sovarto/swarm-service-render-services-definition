@@ -34310,7 +34310,7 @@ ${error}`);
 }
 function ensureAllEnvironmentVariables(environmentVariablesDefinition, environmentVariables) {
     const usedEnvVars = new Set(Object.values(environmentVariablesDefinition).flatMap(getUsedEnvVars));
-    const missingEnvVariables = Array.from(usedEnvVars).filter(x => !(x in environmentVariables));
+    const missingEnvVariables = Array.from(usedEnvVars).filter(x => !(x in environmentVariables) && !(x in process.env));
     if (missingEnvVariables.length) {
         throw new Error(`Some environment variables are being used but have not been passed: ${missingEnvVariables.join(', ')}`);
     }
@@ -34324,7 +34324,7 @@ function getUsedEnvVars(str) {
 function replaceEnvVars(str, env) {
     const regex = /\$\{?(\w+)}?/g;
     return str.replace(regex, (match, varName) => {
-        return env[varName] ?? match;
+        return env[varName] ?? process.env[varName] ?? match;
     });
 }
 function parseEnvironmentVariablesString(environmentVariablesString) {
