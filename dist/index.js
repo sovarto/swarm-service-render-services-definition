@@ -34246,7 +34246,9 @@ async function run() {
         if (!serviceDefinition.environment) {
             serviceDefinition.environment = [];
         }
-        const environmentVariables = parseEnvironmentVariablesString(environmentVariablesString || '');
+        const environmentVariables = parseEnvironmentVariablesString(environmentVariablesString
+            || process.env.SERVICE_DEFINITION_ENVIRONMENT_VARIABLES
+            || '');
         const normalizedEnvironmentVariables = normalizeServiceDefinitionEnvironment(serviceDefinition.environment);
         const unusedEnvVars = ensureAllEnvironmentVariables(normalizedEnvironmentVariables, environmentVariables);
         let env = Object.entries(normalizedEnvironmentVariables)
@@ -34310,7 +34312,8 @@ ${error}`);
 }
 function ensureAllEnvironmentVariables(environmentVariablesDefinition, environmentVariables) {
     const usedEnvVars = new Set(Object.values(environmentVariablesDefinition).flatMap(getUsedEnvVars));
-    const missingEnvVariables = Array.from(usedEnvVars).filter(x => !(x in environmentVariables) && !(x in process.env));
+    const missingEnvVariables = Array.from(usedEnvVars)
+        .filter(x => !(x in environmentVariables) && !(x in process.env));
     if (missingEnvVariables.length) {
         throw new Error(`Some environment variables are being used but have not been passed: ${missingEnvVariables.join(', ')}`);
     }

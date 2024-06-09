@@ -144,6 +144,55 @@ services:
         expect(core.setOutput).toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
     });
 
+    test('renders the services definition with initially empty environment block and environment values loaded from default',
+        async () => {
+            const mockGetInput = core.getInput as jest.Mock;
+            mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                        .mockReturnValueOnce('web')                  // service-name
+                        .mockReturnValueOnce('nginx:latest');         // image
+
+            const mockFileSync = tmp.fileSync as jest.Mock;
+            mockFileSync.mockReturnValue({
+                name: 'new-services-definition-file-name'
+            });
+
+            const mockExistsSync = fs.existsSync as jest.Mock;
+            mockExistsSync.mockReturnValue(true);
+
+            const mockReadFileSync = fs.readFileSync as jest.Mock;
+            mockReadFileSync.mockReturnValue(`
+services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+`);
+
+            process.env.SERVICE_DEFINITION_ENVIRONMENT_VARIABLES = "FOO=f00\nBAR=b4r"
+
+            await run();
+            expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
+                tmpdir: '/home/runner/work/_temp',
+                prefix: 'services-definition-',
+                postfix: '.yaml',
+                keep: true,
+                discardDescriptor: true
+            });
+            expect(fs.writeFileSync).toHaveBeenNthCalledWith(1, 'new-services-definition-file-name',
+                `services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+    image: 'nginx:latest'
+    environment:
+      FOO: 'f00'
+      BAR: 'b4r'
+`);
+            expect(core.setOutput)
+                .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
+        });
+
     test('renders a services definition with environments as an object', async () => {
         const mockGetInput = core.getInput as jest.Mock;
         mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition

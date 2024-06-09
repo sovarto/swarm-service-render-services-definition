@@ -38,7 +38,10 @@ export async function run(): Promise<void> {
             serviceDefinition.environment = [];
         }
 
-        const environmentVariables = parseEnvironmentVariablesString(environmentVariablesString || '');
+        const environmentVariables = parseEnvironmentVariablesString(
+            environmentVariablesString
+            || process.env.SERVICE_DEFINITION_ENVIRONMENT_VARIABLES
+            || '');
 
         const normalizedEnvironmentVariables = normalizeServiceDefinitionEnvironment(serviceDefinition.environment);
         const unusedEnvVars = ensureAllEnvironmentVariables(normalizedEnvironmentVariables, environmentVariables);
@@ -74,7 +77,7 @@ export async function run(): Promise<void> {
         } else {
             core.setFailed(`Unknown error of type '${ typeof error }${ typeof error === 'object'
                                                                        ? ` / ${ error!.constructor.name }`
-                                                                       : '' }' occurred:\n\n${error}`);
+                                                                       : '' }' occurred:\n\n${ error }`);
         }
     }
 }
@@ -107,7 +110,8 @@ function ensureAllEnvironmentVariables(environmentVariablesDefinition: Record<st
                                        environmentVariables: Record<string, string>) {
     const usedEnvVars = new Set(Object.values(environmentVariablesDefinition).flatMap(getUsedEnvVars));
 
-    const missingEnvVariables = Array.from(usedEnvVars).filter(x => !(x in environmentVariables) && !(x in process.env));
+    const missingEnvVariables = Array.from(usedEnvVars)
+                                     .filter(x => !(x in environmentVariables) && !(x in process.env));
     if (missingEnvVariables.length) {
         throw new Error(
             `Some environment variables are being used but have not been passed: ${ missingEnvVariables.join(', ') }`);
