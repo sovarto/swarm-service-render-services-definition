@@ -159,7 +159,7 @@ function getEnvironmentItems(environmentVariablesString: string) {
                                                 .map(x => x.split('='));
         const invalidLines = items.filter(x => x.length === 1);
         if (invalidLines.length) {
-            throw new Error(`Invalid environment variables received. Environment variables needs to be valid JSON or it needs to be lines of the form NAME=value. The following lines are invalid:\n${ invalidLines.join(
+            throw new Error(`Invalid environment variables received. Input 'environment-variables' needs to be valid JSON or it needs to be lines of the form NAME=value. The following lines are invalid:\n${ invalidLines.join(
                 '\n') }`);
         }
 

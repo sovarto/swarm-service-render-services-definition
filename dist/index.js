@@ -34331,19 +34331,34 @@ function replaceEnvVars(str, env) {
     });
 }
 function parseEnvironmentVariablesString(environmentVariablesString) {
-    const items = environmentVariablesString.split('\n').map(x => x.trim()).filter(x => !!x.length)
-        .map(x => x.split('='));
-    const invalidLines = items.filter(x => x.length === 1);
-    if (invalidLines.length) {
-        throw new Error(`Invalid environment variables received. Environment variables need to be lines of the form NAME=value. The following lines are invalid:\n${invalidLines.join('\n')}`);
-    }
-    return items.reduce((acc, [name, ...valueParts]) => {
+    const items = getEnvironmentItems(environmentVariablesString);
+    return items.reduce((acc, { name, value }) => {
         if (acc[name]) {
             throw new Error(`The environment variable '${name}' was specified multiple times in the action inputs`);
         }
-        acc[name] = valueParts.join('=');
+        acc[name] = value;
         return acc;
     }, {});
+}
+function getEnvironmentItems(environmentVariablesString) {
+    try {
+        const env = JSON.parse(environmentVariablesString);
+        for (const item of env) {
+            if (item.sensitive) {
+                core.setSecret(item.value);
+            }
+        }
+        return env;
+    }
+    catch (e) {
+        const items = environmentVariablesString.split('\n').map(x => x.trim()).filter(x => !!x.length)
+            .map(x => x.split('='));
+        const invalidLines = items.filter(x => x.length === 1);
+        if (invalidLines.length) {
+            throw new Error(`Invalid environment variables received. Input 'environment-variables' needs to be valid JSON or it needs to be lines of the form NAME=value. The following lines are invalid:\n${invalidLines.join('\n')}`);
+        }
+        return items.map(([name, ...valueParts]) => ({ name, value: valueParts.join('=') }));
+    }
 }
 function normalizeServiceDefinitionEnvironment(environment) {
     if (Array.isArray(environment)) {

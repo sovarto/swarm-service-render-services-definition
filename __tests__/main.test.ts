@@ -73,6 +73,9 @@ services:
 `);
 
             await run();
+
+            expect(core.setFailed).not.toHaveBeenCalled();
+
             expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
                 tmpdir: '/home/runner/work/_temp',
                 prefix: 'services-definition-',
@@ -122,6 +125,8 @@ services:
 
         await run();
 
+        expect(core.setFailed).not.toHaveBeenCalled();
+
         expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
             tmpdir: '/home/runner/work/_temp',
             prefix: 'services-definition-',
@@ -144,7 +149,8 @@ services:
         expect(core.setOutput).toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
     });
 
-    test('renders the services definition with initially empty environment block and environment values loaded from default',
+    test(
+        'renders the services definition with initially empty environment block and environment values loaded from default',
         async () => {
             const mockGetInput = core.getInput as jest.Mock;
             mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
@@ -168,9 +174,12 @@ services:
       port: 1234
 `);
 
-            process.env.SERVICE_DEFINITION_ENVIRONMENT_VARIABLES = "FOO=f00\nBAR=b4r"
+            process.env.SERVICE_DEFINITION_ENVIRONMENT_VARIABLES = 'FOO=f00\nBAR=b4r';
 
             await run();
+
+            expect(core.setFailed).not.toHaveBeenCalled();
+
             expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
                 tmpdir: '/home/runner/work/_temp',
                 prefix: 'services-definition-',
@@ -214,6 +223,8 @@ services:
 
         await run();
 
+        expect(core.setFailed).not.toHaveBeenCalled();
+
         expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
             tmpdir: '/home/runner/work/_temp',
             prefix: 'services-definition-',
@@ -240,7 +251,7 @@ services:
         const mockGetInput = core.getInput as jest.Mock;
         mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
                     .mockReturnValueOnce('web')                  // service-name
-                    .mockReturnValueOnce('nginx:latest')         // image
+                    .mockReturnValueOnce('nginx:latest');         // image
 
         const mockReadFileSync = fs.readFileSync as jest.Mock;
         mockReadFileSync.mockReturnValue(`
@@ -253,9 +264,11 @@ services:
       port: 1234
 `);
 
-        process.env.A = 'bar'
+        process.env.A = 'bar';
 
         await run();
+
+        expect(core.setFailed).not.toHaveBeenCalled();
 
         expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
             tmpdir: '/home/runner/work/_temp',
@@ -370,7 +383,7 @@ services:
 
         expect(core.setFailed)
             .toHaveBeenCalledWith(
-                'Invalid environment variables received. Environment variables need to be lines of the form NAME=value. The following lines are invalid:\nBAZ');
+                'Invalid environment variables received. Input \'environment-variables\' needs to be valid JSON or it needs to be lines of the form NAME=value. The following lines are invalid:\nBAZ');
     });
 
     test('error returned for same environment variable multiple times in input', async () => {
@@ -518,7 +531,8 @@ services:
 
         await run();
 
-        expect(core.setFailed).toHaveBeenCalledWith(`Unknown error of type '${ expectedType }' occurred:\n\n${error}`);
+        expect(core.setFailed)
+            .toHaveBeenCalledWith(`Unknown error of type '${ expectedType }' occurred:\n\n${ error }`);
     });
 })
 ;
