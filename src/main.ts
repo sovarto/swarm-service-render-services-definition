@@ -134,21 +134,37 @@ function replaceEnvVars(str: string, env: Record<string, string>): string {
 }
 
 function parseEnvironmentVariablesString(environmentVariablesString: string) {
-    const items = environmentVariablesString.split('\n').map(x => x.trim()).filter(x => !!x.length)
-                                            .map(x => x.split('='));
-    const invalidLines = items.filter(x => x.length === 1);
-    if (invalidLines.length) {
-        throw new Error(`Invalid environment variables received. Environment variables need to be lines of the form NAME=value. The following lines are invalid:\n${ invalidLines.join(
-            '\n') }`);
-    }
+    const items = getEnvironmentItems(environmentVariablesString);
 
-    return items.reduce<Record<string, string>>((acc, [ name, ...valueParts ]) => {
+    return items.reduce<Record<string, string>>((acc, {name, value}) => {
         if (acc[name]) {
             throw new Error(`The environment variable '${ name }' was specified multiple times in the action inputs`);
         }
-        acc[name] = valueParts.join('=');
+        acc[name] = value;
         return acc;
     }, {});
+}
+
+function getEnvironmentItems(environmentVariablesString: string) {
+    try {
+        const env: { name: string, value: string, sensitive?: boolean }[] = JSON.parse(environmentVariablesString);
+        for (const item of env) {
+            if (item.sensitive) {
+                core.setSecret(item.value);
+            }
+        }
+        return env;
+    } catch (e){
+        const items = environmentVariablesString.split('\n').map(x => x.trim()).filter(x => !!x.length)
+                                                .map(x => x.split('='));
+        const invalidLines = items.filter(x => x.length === 1);
+        if (invalidLines.length) {
+            throw new Error(`Invalid environment variables received. Environment variables needs to be valid JSON or it needs to be lines of the form NAME=value. The following lines are invalid:\n${ invalidLines.join(
+                '\n') }`);
+        }
+
+        return items.map(([ name, ...valueParts ]) => ({ name, value: valueParts.join('=') }));
+    }
 }
 
 function normalizeServiceDefinitionEnvironment(environment: Record<string, string> | (string | Record<string, string | number | boolean>)[]) {

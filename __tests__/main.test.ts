@@ -277,6 +277,54 @@ services:
         expect(core.setOutput).toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
     });
 
+    test('renders a services definition with environment variables input as json and marks sensitive ones as secret',
+        async () => {
+            const mockGetInput = core.getInput as jest.Mock;
+            mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                        .mockReturnValueOnce('web')                  // service-name
+                        .mockReturnValueOnce('nginx:latest')         // image
+                        .mockReturnValueOnce(JSON.stringify([
+                            { name: 'FOO', value: 'f00', sensitive: true },
+                            { name: 'BAR', value: 'b4r' }
+                        ]));
+
+            const mockReadFileSync = fs.readFileSync as jest.Mock;
+            mockReadFileSync.mockReturnValue(`
+services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+`);
+            await run();
+
+            expect(core.setFailed).not.toHaveBeenCalled();
+
+            expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
+                tmpdir: '/home/runner/work/_temp',
+                prefix: 'services-definition-',
+                postfix: '.yaml',
+                keep: true,
+                discardDescriptor: true
+            });
+            expect(fs.writeFileSync).toHaveBeenNthCalledWith(1, 'new-services-definition-file-name',
+                `services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+    image: 'nginx:latest'
+    environment:
+      FOO: 'f00'
+      BAR: 'b4r'
+`);
+            expect(core.setSecret).toHaveBeenNthCalledWith(1, 'f00');
+            expect(core.setSecret).toHaveBeenCalledTimes(1);
+            expect(core.setOutput)
+                .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
+        });
+
+
     test('error returned for missing environment variable', async () => {
         const mockExistsSync = fs.existsSync as jest.Mock;
         mockExistsSync.mockReturnValue(true);
