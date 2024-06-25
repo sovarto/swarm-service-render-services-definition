@@ -14,11 +14,14 @@ export async function run(): Promise<void> {
         const servicesDefinitionFile = core.getInput('services-definition', { required: true });
         let serviceName = core.getInput('service-name', { required: false });
         const image = core.getInput('image', { required: true });
-        const environmentVariablesString = core.getInput('environment-variables', { required: false });
+        const environmentVariablesString = core.getInput('environment-variables',
+            { required: false });
+        const nodeType = core.getInput('node-type', { required: false });
 
         const servicesDefinitionPath = path.isAbsolute(servicesDefinitionFile) ?
                                        servicesDefinitionFile :
-                                       path.join(process.env.GITHUB_WORKSPACE!, servicesDefinitionFile);
+                                       path.join(process.env.GITHUB_WORKSPACE!,
+                                           servicesDefinitionFile);
         if (!fs.existsSync(servicesDefinitionPath)) {
             throw new Error(`Services definition file does not exist: ${ servicesDefinitionFile }`);
         }
@@ -37,9 +40,15 @@ export async function run(): Promise<void> {
             throw new Error(`Couldn't find service '${ serviceName }' in services definition file '${ servicesDefinitionPath }'`);
         }
 
-        const serviceDefinition = servicesDefinition.services[serviceName] || {}; // It's null, if only the service
-                                                                                  // name was specified in the services
-                                                                                  // definition file and nothing else
+        const serviceDefinition = servicesDefinition.services[serviceName] || {}; // It's null, if
+                                                                                  // only the
+                                                                                  // service name
+                                                                                  // was specified
+                                                                                  // in the
+                                                                                  // services
+                                                                                  // definition
+                                                                                  // file and
+                                                                                  // nothing else
         serviceDefinition.image = image;
 
         if (!serviceDefinition.environment) {
@@ -51,8 +60,10 @@ export async function run(): Promise<void> {
             || process.env.SERVICE_DEFINITION_ENVIRONMENT_VARIABLES
             || '');
 
-        const normalizedEnvironmentVariables = normalizeServiceDefinitionEnvironment(serviceDefinition.environment);
-        const unusedEnvVars = ensureAllEnvironmentVariables(normalizedEnvironmentVariables, environmentVariables);
+        const normalizedEnvironmentVariables = normalizeServiceDefinitionEnvironment(
+            serviceDefinition.environment);
+        const unusedEnvVars = ensureAllEnvironmentVariables(normalizedEnvironmentVariables,
+            environmentVariables);
 
         let env = Object.entries(normalizedEnvironmentVariables)
                         .reduce<Record<string, string>>((acc, [ name, value ]) => {
@@ -67,7 +78,14 @@ export async function run(): Promise<void> {
                         return acc;
                     }, env);
 
-        serviceDefinition.environment = env;
+        if(Object.keys(env).length) {
+            serviceDefinition.environment = env;
+        } else {
+            delete serviceDefinition.environment;
+        }
+        if (nodeType?.length) {
+            serviceDefinition.node_type = nodeType;
+        }
 
         const updatedServicesDefinitionFilePath = tmp.fileSync({
             tmpdir: process.env.RUNNER_TEMP,
@@ -77,7 +95,8 @@ export async function run(): Promise<void> {
             discardDescriptor: true
         });
 
-        fs.writeFileSync(updatedServicesDefinitionFilePath.name, yaml.dump(servicesDefinition, { forceQuotes: true }));
+        fs.writeFileSync(updatedServicesDefinitionFilePath.name,
+            yaml.dump(servicesDefinition, { forceQuotes: true }));
         core.setOutput('services-definition', updatedServicesDefinitionFilePath.name);
     } catch (error) {
         if (error instanceof Error) {
@@ -116,16 +135,20 @@ ${ error }`);
 
 function ensureAllEnvironmentVariables(environmentVariablesDefinition: Record<string, string>,
                                        environmentVariables: Record<string, string>) {
-    const usedEnvVars = new Set(Object.values(environmentVariablesDefinition).flatMap(getUsedEnvVars));
+    const usedEnvVars = new Set(Object.values(environmentVariablesDefinition)
+                                      .flatMap(getUsedEnvVars));
 
     const missingEnvVariables = Array.from(usedEnvVars)
-                                     .filter(x => !(x in environmentVariables) && !(x in process.env));
+                                     .filter(x => !(x in environmentVariables) && !(x
+                                                                                    in process.env));
     if (missingEnvVariables.length) {
         throw new Error(
-            `Some environment variables are being used but have not been passed: ${ missingEnvVariables.join(', ') }`);
+            `Some environment variables are being used but have not been passed: ${ missingEnvVariables.join(
+                ', ') }`);
     }
 
-    return new Set(Object.entries(environmentVariables).map(([ key ]) => key).filter(x => !usedEnvVars.has(x)));
+    return new Set(Object.entries(environmentVariables).map(([ key ]) => key)
+                         .filter(x => !usedEnvVars.has(x)));
 }
 
 function getUsedEnvVars(str: string): string[] {
@@ -144,7 +167,7 @@ function replaceEnvVars(str: string, env: Record<string, string>): string {
 function parseEnvironmentVariablesString(environmentVariablesString: string) {
     const items = getEnvironmentItems(environmentVariablesString);
 
-    return items.reduce<Record<string, string>>((acc, {name, value}) => {
+    return items.reduce<Record<string, string>>((acc, { name, value }) => {
         if (acc[name]) {
             throw new Error(`The environment variable '${ name }' was specified multiple times in the action inputs`);
         }
@@ -155,15 +178,17 @@ function parseEnvironmentVariablesString(environmentVariablesString: string) {
 
 function getEnvironmentItems(environmentVariablesString: string) {
     try {
-        const env: { name: string, value: string, sensitive?: boolean }[] = JSON.parse(environmentVariablesString);
+        const env: { name: string, value: string, sensitive?: boolean }[] = JSON.parse(
+            environmentVariablesString);
         for (const item of env) {
             if (item.sensitive) {
                 core.setSecret(item.value);
             }
         }
         return env;
-    } catch (e){
-        const items = environmentVariablesString.split('\n').map(x => x.trim()).filter(x => !!x.length)
+    } catch (e) {
+        const items = environmentVariablesString.split('\n').map(x => x.trim())
+                                                .filter(x => !!x.length)
                                                 .map(x => x.split('='));
         const invalidLines = items.filter(x => x.length === 1);
         if (invalidLines.length) {

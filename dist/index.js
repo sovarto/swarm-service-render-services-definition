@@ -34226,9 +34226,10 @@ const servicesDefinitionSchema_1 = __nccwpck_require__(5471);
 async function run() {
     try {
         const servicesDefinitionFile = core.getInput('services-definition', { required: true });
-        const serviceName = core.getInput('service-name', { required: true });
+        let serviceName = core.getInput('service-name', { required: false });
         const image = core.getInput('image', { required: true });
         const environmentVariablesString = core.getInput('environment-variables', { required: false });
+        const nodeType = core.getInput('node-type', { required: false });
         const servicesDefinitionPath = path.isAbsolute(servicesDefinitionFile) ?
             servicesDefinitionFile :
             path.join(process.env.GITHUB_WORKSPACE, servicesDefinitionFile);
@@ -34236,12 +34237,24 @@ async function run() {
             throw new Error(`Services definition file does not exist: ${servicesDefinitionFile}`);
         }
         const servicesDefinition = validateInput(servicesDefinitionPath);
+        if (!serviceName?.length) {
+            if (Object.keys(servicesDefinition.services).length > 1) {
+                throw new Error('Multiple services exist in definition file but no service-name was specified');
+            }
+            serviceName = Object.keys(servicesDefinition.services)[0];
+        }
         if (!(serviceName in servicesDefinition.services)) {
             throw new Error(`Couldn't find service '${serviceName}' in services definition file '${servicesDefinitionPath}'`);
         }
-        const serviceDefinition = servicesDefinition.services[serviceName] || {}; // It's null, if only the service
-        // name was specified in the services
-        // definition file and nothing else
+        const serviceDefinition = servicesDefinition.services[serviceName] || {}; // It's null, if
+        // only the
+        // service name
+        // was specified
+        // in the
+        // services
+        // definition
+        // file and
+        // nothing else
         serviceDefinition.image = image;
         if (!serviceDefinition.environment) {
             serviceDefinition.environment = [];
@@ -34262,7 +34275,15 @@ async function run() {
             acc[name] = value;
             return acc;
         }, env);
-        serviceDefinition.environment = env;
+        if (Object.keys(env).length) {
+            serviceDefinition.environment = env;
+        }
+        else {
+            delete serviceDefinition.environment;
+        }
+        if (nodeType?.length) {
+            serviceDefinition.node_type = nodeType;
+        }
         const updatedServicesDefinitionFilePath = tmp.fileSync({
             tmpdir: process.env.RUNNER_TEMP,
             prefix: 'services-definition-',
@@ -34311,13 +34332,16 @@ ${error}`);
     return input;
 }
 function ensureAllEnvironmentVariables(environmentVariablesDefinition, environmentVariables) {
-    const usedEnvVars = new Set(Object.values(environmentVariablesDefinition).flatMap(getUsedEnvVars));
+    const usedEnvVars = new Set(Object.values(environmentVariablesDefinition)
+        .flatMap(getUsedEnvVars));
     const missingEnvVariables = Array.from(usedEnvVars)
-        .filter(x => !(x in environmentVariables) && !(x in process.env));
+        .filter(x => !(x in environmentVariables) && !(x
+        in process.env));
     if (missingEnvVariables.length) {
         throw new Error(`Some environment variables are being used but have not been passed: ${missingEnvVariables.join(', ')}`);
     }
-    return new Set(Object.entries(environmentVariables).map(([key]) => key).filter(x => !usedEnvVars.has(x)));
+    return new Set(Object.entries(environmentVariables).map(([key]) => key)
+        .filter(x => !usedEnvVars.has(x)));
 }
 function getUsedEnvVars(str) {
     const regex = /\$\{?(\w+)}?/g;
@@ -34351,7 +34375,8 @@ function getEnvironmentItems(environmentVariablesString) {
         return env;
     }
     catch (e) {
-        const items = environmentVariablesString.split('\n').map(x => x.trim()).filter(x => !!x.length)
+        const items = environmentVariablesString.split('\n').map(x => x.trim())
+            .filter(x => !!x.length)
             .map(x => x.split('='));
         const invalidLines = items.filter(x => x.length === 1);
         if (invalidLines.length) {
@@ -34406,6 +34431,7 @@ const EnvironmentSchema = zod_1.z.union([
 const ServiceDefinitionSchema = zod_1.z.object({
     image: zod_1.z.string().optional(),
     environment: EnvironmentSchema.optional(),
+    node_type: zod_1.z.string().optional()
 });
 exports.ServicesDefinitionSchema = zod_1.z.object({
     services: zod_1.z.record(zod_1.z.union([zod_1.z.null(), ServiceDefinitionSchema]))

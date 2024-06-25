@@ -337,6 +337,47 @@ services:
                 .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
         });
 
+    test('adds node type to service definition if specified',
+        async () => {
+            const mockGetInput = core.getInput as jest.Mock;
+            mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                        .mockReturnValueOnce('web')                  // service-name
+                        .mockReturnValueOnce('nginx:latest')         // image
+                        .mockReturnValueOnce('')
+                        .mockReturnValueOnce('appInfrastructureNode');
+
+            const mockReadFileSync = fs.readFileSync as jest.Mock;
+            mockReadFileSync.mockReturnValue(`
+services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+`);
+            await run();
+
+            expect(core.setFailed).not.toHaveBeenCalled();
+
+            expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
+                tmpdir: '/home/runner/work/_temp',
+                prefix: 'services-definition-',
+                postfix: '.yaml',
+                keep: true,
+                discardDescriptor: true
+            });
+            expect(fs.writeFileSync).toHaveBeenNthCalledWith(1, 'new-services-definition-file-name',
+                `services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+    image: 'nginx:latest'
+    node_type: 'appInfrastructureNode'
+`);
+            expect(core.setOutput)
+                .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
+        });
+
     test('renders a services definition with a single service when no service-name was specified',
         async () => {
             const mockGetInput = core.getInput as jest.Mock;
