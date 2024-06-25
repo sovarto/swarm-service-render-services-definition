@@ -12,7 +12,7 @@ import { ServicesDefinitionSchema } from './servicesDefinitionSchema';
 export async function run(): Promise<void> {
     try {
         const servicesDefinitionFile = core.getInput('services-definition', { required: true });
-        const serviceName = core.getInput('service-name', { required: true });
+        let serviceName = core.getInput('service-name', { required: false });
         const image = core.getInput('image', { required: true });
         const environmentVariablesString = core.getInput('environment-variables', { required: false });
 
@@ -25,6 +25,14 @@ export async function run(): Promise<void> {
 
         const servicesDefinition = validateInput(servicesDefinitionPath);
 
+        if (!serviceName?.length) {
+            if (Object.keys(servicesDefinition.services).length > 1) {
+                throw new Error(
+                    'Multiple services exist in definition file but no service-name was specified');
+            }
+
+            serviceName = Object.keys(servicesDefinition.services)[0];
+        }
         if (!(serviceName in servicesDefinition.services)) {
             throw new Error(`Couldn't find service '${ serviceName }' in services definition file '${ servicesDefinitionPath }'`);
         }

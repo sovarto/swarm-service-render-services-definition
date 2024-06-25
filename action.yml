@@ -13,7 +13,7 @@ inputs:
     default: '.cluster/services-definition.tmpl.yaml'
   service-name:
     description: 'The name of the service inside the services definition file'
-    required: true
+    required: false
   image:
     description: 'The URI of the container image to insert into the services definition'
     required: true

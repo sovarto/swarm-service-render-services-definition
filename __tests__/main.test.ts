@@ -337,6 +337,66 @@ services:
                 .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
         });
 
+    test('renders a services definition with a single service when no service-name was specified',
+        async () => {
+            const mockGetInput = core.getInput as jest.Mock;
+            mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                        .mockReturnValueOnce(undefined)                  // service-name
+                        .mockReturnValueOnce('nginx:latest');         // image
+
+            const mockReadFileSync = fs.readFileSync as jest.Mock;
+            mockReadFileSync.mockReturnValue(`
+services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+`);
+            await run();
+
+            expect(core.setFailed).not.toHaveBeenCalled();
+
+            expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
+                tmpdir: '/home/runner/work/_temp',
+                prefix: 'services-definition-',
+                postfix: '.yaml',
+                keep: true,
+                discardDescriptor: true
+            });
+            expect(fs.writeFileSync).toHaveBeenNthCalledWith(1, 'new-services-definition-file-name',
+                `services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+    image: 'nginx:latest'
+`);
+            expect(core.setOutput)
+                .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
+        });
+
+    test('error returned for missing service-name when multiple services exist', async () => {
+        const mockExistsSync = fs.existsSync as jest.Mock;
+        mockExistsSync.mockReturnValue(true);
+
+        const mockReadFileSync = fs.readFileSync as jest.Mock;
+        mockReadFileSync.mockReturnValue(`
+services:
+  web:
+  db:
+`);
+
+        const mockGetInput = core.getInput as jest.Mock;
+        mockGetInput.mockReturnValueOnce('missing-environment-variable-services-definition.tmpl.yaml')
+                    .mockReturnValueOnce(undefined)
+                    .mockReturnValueOnce('nginx:latest');
+
+        await run();
+
+        expect(core.setFailed)
+            .toHaveBeenCalledWith(
+                'Multiple services exist in definition file but no service-name was specified');
+    });
 
     test('error returned for missing environment variable', async () => {
         const mockExistsSync = fs.existsSync as jest.Mock;
