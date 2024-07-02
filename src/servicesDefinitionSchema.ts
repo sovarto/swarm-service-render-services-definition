@@ -8,21 +8,29 @@ const EnvironmentSchema = z.union([
     z.record(z.string())
 ]);
 
-const ResourcesSchema = z.strictObject({
+const ResourcesLimitsReservationsSchema = z.object({
     memory: z.number().optional(), // in MiB
     cpuShares: z.number().optional() // in 1/1000 CPU shares.
 })
 
-const ServiceDefinitionSchema = z.object({
+const ResourcesSchema = z.object({
+    limits: ResourcesLimitsReservationsSchema.optional(),
+    reservations: ResourcesLimitsReservationsSchema.optional()
+})
+
+const ReplicasSchema = z.object({min: z.number(), max: z.number().optional()}).optional()
+
+const AdditionalServiceDefinitionAdjustmentsSchema = z.object({
+    node_type: z.string().optional(),
+    replicas: ReplicasSchema.optional(),
+    resources: ResourcesSchema.optional()
+});
+
+const ServiceDefinitionSchema = z.intersection(z.object({
     image: z.string().optional(),
     environment: EnvironmentSchema.optional(),
-    node_type: z.string().optional(),
-    replicas: z.object({min: z.number(), max: z.number().optional()}).optional(),
-    resources: z.object({
-        limits: ResourcesSchema.optional(),
-        reservations: ResourcesSchema.optional()
-    }).optional()
-});
+}), AdditionalServiceDefinitionAdjustmentsSchema);
+
 
 export const ServicesDefinitionSchema = z.object({
     services: z.record(z.union([z.null(), ServiceDefinitionSchema]))

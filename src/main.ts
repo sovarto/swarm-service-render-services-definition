@@ -16,13 +16,9 @@ export async function run(): Promise<void> {
         const image = core.getInput('image', { required: true });
         const environmentVariablesString = core.getInput('environment-variables',
             { required: false });
-        const nodeType = core.getInput('node-type', { required: false });
-        const replicasMinString = core.getInput('replicas-min', { required: false });
-        const replicasMaxString = core.getInput('replicas-max', { required: false });
-        const resourceReservationsCpuString = core.getInput('resources-reservations-cpu', {required: false});
-        const resourceReservationsMemoryString = core.getInput('resources-reservations-memory', {required: false});
-        const resourceLimitsCpuString = core.getInput('resources-limits-cpu', {required: false});
-        const resourceLimitsMemoryString = core.getInput('resources-limits-memory', {required: false});
+        const additionalServiceDefinitionAdjustmentsString =
+            core.getInput('service-definition-adjustments', { required: false })
+            || process.env.SERVICE_DEFINITION_ADJUSTMENTS;
 
         const servicesDefinitionPath = path.isAbsolute(servicesDefinitionFile) ?
                                        servicesDefinitionFile :
@@ -46,44 +42,13 @@ export async function run(): Promise<void> {
             throw new Error(`Couldn't find service '${ serviceName }' in services definition file '${ servicesDefinitionPath }'`);
         }
 
-        if (replicasMaxString && !replicasMinString) {
-            throw new Error(
-                'If replicas-max is specified, replicas-min needs to be specified as well');
+        // This is the case if only the service name and nothing else was specified in the YAML
+        if (!servicesDefinition.services[serviceName]) {
+            servicesDefinition.services[serviceName] = {};
         }
 
-        const replicasMin = parseInt(replicasMinString, 10);
-        const replicasMax = parseInt(replicasMaxString, 10);
-        const resourceReservationsCpu = parseInt(resourceReservationsCpuString, 10);
-        const resourceReservationsMemory = parseInt(resourceReservationsMemoryString, 10);
-        const resourceLimitsCpu = parseInt(resourceLimitsCpuString, 10);
-        const resourceLimitsMemory = parseInt(resourceLimitsMemoryString, 10);
-        if (replicasMinString && Number.isNaN(replicasMin)) {
-            throw new Error(`Need to specify a number for replicas-min. Got '${ replicasMinString }'.`);
-        }
-        if (replicasMaxString && Number.isNaN(replicasMax)) {
-            throw new Error(`Need to specify a number for replicas-max. Got '${ replicasMaxString }'.`);
-        }
-        if (resourceReservationsCpuString && Number.isNaN(resourceReservationsCpu)) {
-            throw new Error(`Need to specify a number for resources-reservations-cpu. Got '${ resourceReservationsCpuString }'.`);
-        }
-        if (resourceReservationsMemoryString && Number.isNaN(resourceReservationsMemory)) {
-            throw new Error(`Need to specify a number for resources-reservations-memory. Got '${ resourceReservationsMemoryString }'.`);
-        }
-        if (resourceLimitsCpuString && Number.isNaN(resourceLimitsCpu)) {
-            throw new Error(`Need to specify a number for resources-limits-cpu. Got '${ resourceLimitsCpuString }'.`);
-        }
-        if (resourceLimitsMemoryString && Number.isNaN(resourceLimitsMemory)) {
-            throw new Error(`Need to specify a number for resources-limits-memory. Got '${ resourceLimitsMemoryString }'.`);
-        }
-        const serviceDefinition = servicesDefinition.services[serviceName] || {}; // It's null, if
-                                                                                  // only the
-                                                                                  // service name
-                                                                                  // was specified
-                                                                                  // in the
-                                                                                  // services
-                                                                                  // definition
-                                                                                  // file and
-                                                                                  // nothing else
+        const serviceDefinition = servicesDefinition.services[serviceName]!;
+
         serviceDefinition.image = image;
 
         if (!serviceDefinition.environment) {
@@ -118,39 +83,10 @@ export async function run(): Promise<void> {
         } else {
             delete serviceDefinition.environment;
         }
-        if (nodeType?.length) {
-            serviceDefinition.node_type = nodeType;
-        }
 
-        if (replicasMinString) {
-            serviceDefinition.replicas = { min: replicasMin };
-            if (replicasMaxString) {
-                serviceDefinition.replicas.max = replicasMax;
-            }
-        }
-
-        if(resourceReservationsCpu) {
-            serviceDefinition.resources = serviceDefinition.resources || {}
-            serviceDefinition.resources.reservations = serviceDefinition.resources.reservations || {};
-            serviceDefinition.resources.reservations.cpuShares = resourceReservationsCpu;
-        }
-
-        if(resourceReservationsMemory) {
-            serviceDefinition.resources = serviceDefinition.resources || {}
-            serviceDefinition.resources.reservations = serviceDefinition.resources.reservations || {};
-            serviceDefinition.resources.reservations.memory = resourceReservationsMemory;
-        }
-
-        if(resourceLimitsCpu) {
-            serviceDefinition.resources = serviceDefinition.resources || {}
-            serviceDefinition.resources.limits = serviceDefinition.resources.limits || {};
-            serviceDefinition.resources.limits.cpuShares = resourceLimitsCpu;
-        }
-
-        if(resourceLimitsMemory) {
-            serviceDefinition.resources = serviceDefinition.resources || {}
-            serviceDefinition.resources.limits = serviceDefinition.resources.limits || {};
-            serviceDefinition.resources.limits.memory = resourceLimitsMemory;
+        if (additionalServiceDefinitionAdjustmentsString) {
+            servicesDefinition.services[serviceName] =
+                { ...serviceDefinition, ...JSON.parse(additionalServiceDefinitionAdjustmentsString) };
         }
 
         const updatedServicesDefinitionFilePath = tmp.fileSync({

@@ -20,26 +20,8 @@ inputs:
   environment-variables:
     description: 'Variables to add or update on the service. Each variable is of the form KEY=value, you can specify multiple variables with multi-line YAML strings.'
     required: false
-  node-type:
-    description: 'The node type to which this service should be deployed. Translates to a constraint node.labels.<node-type> == true'
-    required: false
-  replicas-min:
-    description: ''
-    required: false
-  replicas-max:
-    description: ''
-    required: false
-  resources-reservations-cpu:
-    description: 'The CPU shares reservation in 1/1000th of a CPU'
-    required: false
-  resources-reservations-memory:
-    description: 'The memory reservation in MiB'
-    required: false
-  resources-limits-cpu:
-    description: 'The CPU shares limit in 1/1000th of a CPU'
-    required: false
-  resources-limits-memory:
-    description: 'The memory limit in MiB'
+  service-definition-adjustments:
+    description: 'Additional adjustments to the service definition.'
     required: false
 
 outputs:
