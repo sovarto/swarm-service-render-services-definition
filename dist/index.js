@@ -34230,6 +34230,8 @@ async function run() {
         const image = core.getInput('image', { required: true });
         const environmentVariablesString = core.getInput('environment-variables', { required: false });
         const nodeType = core.getInput('node-type', { required: false });
+        const replicasMinString = core.getInput('replicas-min', { required: false });
+        const replicasMaxString = core.getInput('replicas-max', { required: false });
         const servicesDefinitionPath = path.isAbsolute(servicesDefinitionFile) ?
             servicesDefinitionFile :
             path.join(process.env.GITHUB_WORKSPACE, servicesDefinitionFile);
@@ -34245,6 +34247,17 @@ async function run() {
         }
         if (!(serviceName in servicesDefinition.services)) {
             throw new Error(`Couldn't find service '${serviceName}' in services definition file '${servicesDefinitionPath}'`);
+        }
+        if (replicasMaxString && !replicasMinString) {
+            throw new Error('If replicas-max is specified, replicas-min needs to be specified as well');
+        }
+        const replicasMin = parseInt(replicasMinString, 10);
+        const replicasMax = parseInt(replicasMaxString, 10);
+        if (replicasMinString && Number.isNaN(replicasMin)) {
+            throw new Error(`Need to specify a number for replicas-min. Got '${replicasMinString}'.`);
+        }
+        if (replicasMaxString && Number.isNaN(replicasMax)) {
+            throw new Error(`Need to specify a number for replicas-max. Got '${replicasMaxString}'.`);
         }
         const serviceDefinition = servicesDefinition.services[serviceName] || {}; // It's null, if
         // only the
@@ -34283,6 +34296,12 @@ async function run() {
         }
         if (nodeType?.length) {
             serviceDefinition.node_type = nodeType;
+        }
+        if (replicasMinString) {
+            serviceDefinition.replicas = { min: replicasMin };
+            if (replicasMaxString) {
+                serviceDefinition.replicas.max = replicasMax;
+            }
         }
         const updatedServicesDefinitionFilePath = tmp.fileSync({
             tmpdir: process.env.RUNNER_TEMP,
@@ -34431,7 +34450,8 @@ const EnvironmentSchema = zod_1.z.union([
 const ServiceDefinitionSchema = zod_1.z.object({
     image: zod_1.z.string().optional(),
     environment: EnvironmentSchema.optional(),
-    node_type: zod_1.z.string().optional()
+    node_type: zod_1.z.string().optional(),
+    replicas: zod_1.z.object({ min: zod_1.z.number(), max: zod_1.z.number().optional() }).optional()
 });
 exports.ServicesDefinitionSchema = zod_1.z.object({
     services: zod_1.z.record(zod_1.z.union([zod_1.z.null(), ServiceDefinitionSchema]))

@@ -378,6 +378,94 @@ services:
                 .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
         });
 
+    test('renders a services with only min replicas if specified',
+        async () => {
+        const mockGetInput = core.getInput as jest.Mock;
+        mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                    .mockReturnValueOnce(undefined)                  // service-name
+                    .mockReturnValueOnce('nginx:latest')         // image
+                    .mockReturnValueOnce(undefined) // env
+                    .mockReturnValueOnce(undefined) // node-type
+                    .mockReturnValueOnce('2'); // replicas-min
+
+        const mockReadFileSync = fs.readFileSync as jest.Mock;
+        mockReadFileSync.mockReturnValue(`
+services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+`);
+        await run();
+
+        expect(core.setFailed).not.toHaveBeenCalled();
+
+        expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
+            tmpdir: '/home/runner/work/_temp',
+            prefix: 'services-definition-',
+            postfix: '.yaml',
+            keep: true,
+            discardDescriptor: true
+        });
+        expect(fs.writeFileSync).toHaveBeenNthCalledWith(1, 'new-services-definition-file-name',
+            `services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+    image: 'nginx:latest'
+    replicas:
+      min: 2
+`);
+        expect(core.setOutput)
+            .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
+    });
+
+    test('renders a services with min and max replicas if specified',
+        async () => {
+            const mockGetInput = core.getInput as jest.Mock;
+            mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                        .mockReturnValueOnce(undefined)                  // service-name
+                        .mockReturnValueOnce('nginx:latest')         // image
+                        .mockReturnValueOnce(undefined) // env
+                        .mockReturnValueOnce(undefined) // node-type
+                        .mockReturnValueOnce('2')  // replicas-min
+                        .mockReturnValueOnce('5'); // replicas-max
+
+            const mockReadFileSync = fs.readFileSync as jest.Mock;
+            mockReadFileSync.mockReturnValue(`
+services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+`);
+            await run();
+
+            expect(core.setFailed).not.toHaveBeenCalled();
+
+            expect(tmp.fileSync).toHaveBeenNthCalledWith(1, {
+                tmpdir: '/home/runner/work/_temp',
+                prefix: 'services-definition-',
+                postfix: '.yaml',
+                keep: true,
+                discardDescriptor: true
+            });
+            expect(fs.writeFileSync).toHaveBeenNthCalledWith(1, 'new-services-definition-file-name',
+                `services:
+  web:
+    external_route:
+      subdomain: 'web'
+      port: 1234
+    image: 'nginx:latest'
+    replicas:
+      min: 2
+      max: 5
+`);
+            expect(core.setOutput)
+                .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
+        });
+
     test('renders a services definition with a single service when no service-name was specified',
         async () => {
             const mockGetInput = core.getInput as jest.Mock;
@@ -415,6 +503,82 @@ services:
             expect(core.setOutput)
                 .toHaveBeenNthCalledWith(1, 'services-definition', 'new-services-definition-file-name');
         });
+
+    test('error returned if only max replicas is specified', async () => {
+        const mockExistsSync = fs.existsSync as jest.Mock;
+        mockExistsSync.mockReturnValue(true);
+
+        const mockReadFileSync = fs.readFileSync as jest.Mock;
+        mockReadFileSync.mockReturnValue(`
+services:
+  web:
+`);
+
+        const mockGetInput = core.getInput as jest.Mock;
+        mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                    .mockReturnValueOnce(undefined)                  // service-name
+                    .mockReturnValueOnce('nginx:latest')         // image
+                    .mockReturnValueOnce(undefined) // env
+                    .mockReturnValueOnce(undefined) // node-type
+                    .mockReturnValueOnce(undefined)  // replicas-min
+                    .mockReturnValueOnce('5'); // replicas-max
+        await run();
+
+        expect(fs.writeFileSync).not.toHaveBeenCalled();
+        expect(core.setFailed)
+            .toHaveBeenCalledWith(
+                'If replicas-max is specified, replicas-min needs to be specified as well');
+    });
+
+    test('error returned if min replicas is not a number', async () => {
+        const mockExistsSync = fs.existsSync as jest.Mock;
+        mockExistsSync.mockReturnValue(true);
+
+        const mockReadFileSync = fs.readFileSync as jest.Mock;
+        mockReadFileSync.mockReturnValue(`
+services:
+  web:
+`);
+
+        const mockGetInput = core.getInput as jest.Mock;
+        mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                    .mockReturnValueOnce(undefined)                  // service-name
+                    .mockReturnValueOnce('nginx:latest')         // image
+                    .mockReturnValueOnce(undefined) // env
+                    .mockReturnValueOnce(undefined) // node-type
+                    .mockReturnValueOnce('a');  // replicas-min
+
+        await run();
+        expect(fs.writeFileSync).not.toHaveBeenCalled();
+        expect(core.setFailed)
+            .toHaveBeenCalledWith(
+                `Need to specify a number for replicas-min. Got 'a'.`);
+    });
+
+    test('error returned if max replicas is not a number', async () => {
+        const mockExistsSync = fs.existsSync as jest.Mock;
+        mockExistsSync.mockReturnValue(true);
+
+        const mockReadFileSync = fs.readFileSync as jest.Mock;
+        mockReadFileSync.mockReturnValue(`
+services:
+  web:
+`);
+
+        const mockGetInput = core.getInput as jest.Mock;
+        mockGetInput.mockReturnValueOnce('services-definition.tmpl.yaml') // services-definition
+                    .mockReturnValueOnce(undefined)                  // service-name
+                    .mockReturnValueOnce('nginx:latest')         // image
+                    .mockReturnValueOnce(undefined) // env
+                    .mockReturnValueOnce(undefined) // node-type
+                    .mockReturnValueOnce('2')  // replicas-min
+                    .mockReturnValueOnce('a');  // replicas-max
+        await run();
+        expect(fs.writeFileSync).not.toHaveBeenCalled();
+        expect(core.setFailed)
+            .toHaveBeenCalledWith(
+                `Need to specify a number for replicas-max. Got 'a'.`);
+    });
 
     test('error returned for missing service-name when multiple services exist', async () => {
         const mockExistsSync = fs.existsSync as jest.Mock;

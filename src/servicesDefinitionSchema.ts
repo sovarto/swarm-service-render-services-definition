@@ -11,7 +11,8 @@ const EnvironmentSchema = z.union([
 const ServiceDefinitionSchema = z.object({
     image: z.string().optional(),
     environment: EnvironmentSchema.optional(),
-    node_type: z.string().optional()
+    node_type: z.string().optional(),
+    replicas: z.object({min: z.number(), max: z.number().optional()}).optional()
 });
 
 export const ServicesDefinitionSchema = z.object({

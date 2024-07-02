@@ -23,6 +23,12 @@ inputs:
   node-type:
     description: 'The node type to which this service should be deployed. Translates to a constraint node.labels.<node-type> == true'
     required: false
+  replicas-min:
+    description: ''
+    required: false
+  replicas-max:
+    description: ''
+    required: false
 
 outputs:
   services-definition:

@@ -17,6 +17,8 @@ export async function run(): Promise<void> {
         const environmentVariablesString = core.getInput('environment-variables',
             { required: false });
         const nodeType = core.getInput('node-type', { required: false });
+        const replicasMinString = core.getInput('replicas-min', { required: false });
+        const replicasMaxString = core.getInput('replicas-max', { required: false });
 
         const servicesDefinitionPath = path.isAbsolute(servicesDefinitionFile) ?
                                        servicesDefinitionFile :
@@ -38,6 +40,20 @@ export async function run(): Promise<void> {
         }
         if (!(serviceName in servicesDefinition.services)) {
             throw new Error(`Couldn't find service '${ serviceName }' in services definition file '${ servicesDefinitionPath }'`);
+        }
+
+        if (replicasMaxString && !replicasMinString) {
+            throw new Error(
+                'If replicas-max is specified, replicas-min needs to be specified as well');
+        }
+
+        const replicasMin = parseInt(replicasMinString, 10);
+        const replicasMax = parseInt(replicasMaxString, 10);
+        if (replicasMinString && Number.isNaN(replicasMin)) {
+            throw new Error(`Need to specify a number for replicas-min. Got '${ replicasMinString }'.`);
+        }
+        if (replicasMaxString && Number.isNaN(replicasMax)) {
+            throw new Error(`Need to specify a number for replicas-max. Got '${ replicasMaxString }'.`);
         }
 
         const serviceDefinition = servicesDefinition.services[serviceName] || {}; // It's null, if
@@ -78,13 +94,20 @@ export async function run(): Promise<void> {
                         return acc;
                     }, env);
 
-        if(Object.keys(env).length) {
+        if (Object.keys(env).length) {
             serviceDefinition.environment = env;
         } else {
             delete serviceDefinition.environment;
         }
         if (nodeType?.length) {
             serviceDefinition.node_type = nodeType;
+        }
+
+        if (replicasMinString) {
+            serviceDefinition.replicas = { min: replicasMin };
+            if (replicasMaxString) {
+                serviceDefinition.replicas.max = replicasMax;
+            }
         }
 
         const updatedServicesDefinitionFilePath = tmp.fileSync({
