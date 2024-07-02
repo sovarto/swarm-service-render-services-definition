@@ -29,6 +29,18 @@ inputs:
   replicas-max:
     description: ''
     required: false
+  resources-reservations-cpu:
+    description: 'The CPU shares reservation in 1/1000th of a CPU'
+    required: false
+  resources-reservations-memory:
+    description: 'The memory reservation in MiB'
+    required: false
+  resources-limits-cpu:
+    description: 'The CPU shares limit in 1/1000th of a CPU'
+    required: false
+  resources-limits-memory:
+    description: 'The memory limit in MiB'
+    required: false
 
 outputs:
   services-definition:

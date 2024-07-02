@@ -19,6 +19,10 @@ export async function run(): Promise<void> {
         const nodeType = core.getInput('node-type', { required: false });
         const replicasMinString = core.getInput('replicas-min', { required: false });
         const replicasMaxString = core.getInput('replicas-max', { required: false });
+        const resourceReservationsCpuString = core.getInput('resources-reservations-cpu', {required: false});
+        const resourceReservationsMemoryString = core.getInput('resources-reservations-memory', {required: false});
+        const resourceLimitsCpuString = core.getInput('resources-limits-cpu', {required: false});
+        const resourceLimitsMemoryString = core.getInput('resources-limits-memory', {required: false});
 
         const servicesDefinitionPath = path.isAbsolute(servicesDefinitionFile) ?
                                        servicesDefinitionFile :
@@ -49,13 +53,28 @@ export async function run(): Promise<void> {
 
         const replicasMin = parseInt(replicasMinString, 10);
         const replicasMax = parseInt(replicasMaxString, 10);
+        const resourceReservationsCpu = parseInt(resourceReservationsCpuString, 10);
+        const resourceReservationsMemory = parseInt(resourceReservationsMemoryString, 10);
+        const resourceLimitsCpu = parseInt(resourceLimitsCpuString, 10);
+        const resourceLimitsMemory = parseInt(resourceLimitsMemoryString, 10);
         if (replicasMinString && Number.isNaN(replicasMin)) {
             throw new Error(`Need to specify a number for replicas-min. Got '${ replicasMinString }'.`);
         }
         if (replicasMaxString && Number.isNaN(replicasMax)) {
             throw new Error(`Need to specify a number for replicas-max. Got '${ replicasMaxString }'.`);
         }
-
+        if (resourceReservationsCpuString && Number.isNaN(resourceReservationsCpu)) {
+            throw new Error(`Need to specify a number for resources-reservations-cpu. Got '${ resourceReservationsCpuString }'.`);
+        }
+        if (resourceReservationsMemoryString && Number.isNaN(resourceReservationsMemory)) {
+            throw new Error(`Need to specify a number for resources-reservations-memory. Got '${ resourceReservationsMemoryString }'.`);
+        }
+        if (resourceLimitsCpuString && Number.isNaN(resourceLimitsCpu)) {
+            throw new Error(`Need to specify a number for resources-limits-cpu. Got '${ resourceLimitsCpuString }'.`);
+        }
+        if (resourceLimitsMemoryString && Number.isNaN(resourceLimitsMemory)) {
+            throw new Error(`Need to specify a number for resources-limits-memory. Got '${ resourceLimitsMemoryString }'.`);
+        }
         const serviceDefinition = servicesDefinition.services[serviceName] || {}; // It's null, if
                                                                                   // only the
                                                                                   // service name
@@ -108,6 +127,30 @@ export async function run(): Promise<void> {
             if (replicasMaxString) {
                 serviceDefinition.replicas.max = replicasMax;
             }
+        }
+
+        if(resourceReservationsCpu) {
+            serviceDefinition.resources = serviceDefinition.resources || {}
+            serviceDefinition.resources.reservations = serviceDefinition.resources.reservations || {};
+            serviceDefinition.resources.reservations.cpuShares = resourceReservationsCpu;
+        }
+
+        if(resourceReservationsMemory) {
+            serviceDefinition.resources = serviceDefinition.resources || {}
+            serviceDefinition.resources.reservations = serviceDefinition.resources.reservations || {};
+            serviceDefinition.resources.reservations.memory = resourceReservationsMemory;
+        }
+
+        if(resourceLimitsCpu) {
+            serviceDefinition.resources = serviceDefinition.resources || {}
+            serviceDefinition.resources.limits = serviceDefinition.resources.limits || {};
+            serviceDefinition.resources.limits.cpuShares = resourceLimitsCpu;
+        }
+
+        if(resourceLimitsMemory) {
+            serviceDefinition.resources = serviceDefinition.resources || {}
+            serviceDefinition.resources.limits = serviceDefinition.resources.limits || {};
+            serviceDefinition.resources.limits.memory = resourceLimitsMemory;
         }
 
         const updatedServicesDefinitionFilePath = tmp.fileSync({

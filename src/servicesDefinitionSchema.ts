@@ -8,11 +8,20 @@ const EnvironmentSchema = z.union([
     z.record(z.string())
 ]);
 
+const ResourcesSchema = z.strictObject({
+    memory: z.number().optional(), // in MiB
+    cpuShares: z.number().optional() // in 1/1000 CPU shares.
+})
+
 const ServiceDefinitionSchema = z.object({
     image: z.string().optional(),
     environment: EnvironmentSchema.optional(),
     node_type: z.string().optional(),
-    replicas: z.object({min: z.number(), max: z.number().optional()}).optional()
+    replicas: z.object({min: z.number(), max: z.number().optional()}).optional(),
+    resources: z.object({
+        limits: ResourcesSchema.optional(),
+        reservations: ResourcesSchema.optional()
+    }).optional()
 });
 
 export const ServicesDefinitionSchema = z.object({
