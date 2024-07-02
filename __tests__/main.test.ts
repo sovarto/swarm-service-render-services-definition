@@ -24,6 +24,7 @@ describe('Render services definition', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.resetAllMocks();
 
         process.env = { ...originalEnv };
         process.env = Object.assign(process.env, { GITHUB_WORKSPACE: __dirname });
