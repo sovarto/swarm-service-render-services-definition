@@ -16,9 +16,8 @@ export async function run(): Promise<void> {
         const image = core.getInput('image', { required: true });
         const environmentVariablesString = core.getInput('environment-variables',
             { required: false });
-        const additionalServiceDefinitionAdjustmentsString =
-            core.getInput('service-definition-adjustments', { required: false })
-            || process.env.SERVICE_DEFINITION_ADJUSTMENTS;
+        let additionalServiceDefinitionAdjustmentsString =
+            core.getInput('service-definition-adjustments', { required: false });
 
         const servicesDefinitionPath = path.isAbsolute(servicesDefinitionFile) ?
                                        servicesDefinitionFile :
@@ -47,6 +46,11 @@ export async function run(): Promise<void> {
             servicesDefinition.services[serviceName] = {};
         }
 
+        if (!additionalServiceDefinitionAdjustmentsString.length) {
+            additionalServiceDefinitionAdjustmentsString =
+                process.env[`${getServiceNameEnvPrefix(serviceName)}_SERVICE_DEFINITION_ADJUSTMENTS`] || process.env.SERVICE_DEFINITION_ADJUSTMENTS || '';
+        }
+
         const serviceDefinition = servicesDefinition.services[serviceName]!;
 
         serviceDefinition.image = image;
@@ -55,10 +59,9 @@ export async function run(): Promise<void> {
             serviceDefinition.environment = [];
         }
 
+
         const environmentVariables = parseEnvironmentVariablesString(
-            environmentVariablesString
-            || process.env.SERVICE_DEFINITION_ENVIRONMENT_VARIABLES
-            || '');
+            getEnvironmentVariablesString(environmentVariablesString, serviceName));
 
         const normalizedEnvironmentVariables = normalizeServiceDefinitionEnvironment(
             serviceDefinition.environment);
@@ -84,7 +87,7 @@ export async function run(): Promise<void> {
             delete serviceDefinition.environment;
         }
 
-        if (additionalServiceDefinitionAdjustmentsString) {
+        if (additionalServiceDefinitionAdjustmentsString?.length) {
             servicesDefinition.services[serviceName] =
                 { ...serviceDefinition, ...JSON.parse(additionalServiceDefinitionAdjustmentsString) };
         }
@@ -166,6 +169,48 @@ function replaceEnvVars(str: string, env: Record<string, string>): string {
     });
 }
 
+function getServiceNameEnvPrefix(serviceName: string) {
+    return serviceName.toUpperCase().replace(/-/g, '_');
+}
+
+function getEnvironmentVariablesString(environmentVariablesString: string, serviceName: string) {
+    if (environmentVariablesString) {
+        return environmentVariablesString;
+    }
+
+    let result = '';
+    let tmp = process.env[`${ getServiceNameEnvPrefix(serviceName) }SERVICE_DEFINITION_ENVIRONMENT_VARIABLES`];
+    if (tmp?.length) {
+        result = tmp;
+    }
+    tmp = process.env[`${ getServiceNameEnvPrefix(serviceName) }SERVICE_DEFINITION_ENVIRONMENT_VARIABLES_SENSITIVE`];
+    if (tmp?.length) {
+        if (result.length) {
+            result += '\n';
+        }
+        result += tmp;
+    }
+
+    if (result.length) {
+        return result;
+    }
+
+    tmp = process.env['SERVICE_DEFINITION_ENVIRONMENT_VARIABLES'];
+    if (tmp?.length) {
+        result = tmp;
+    }
+    tmp = process.env['SERVICE_DEFINITION_ENVIRONMENT_VARIABLES_SENSITIVE'];
+    if (tmp?.length) {
+        if (result.length) {
+            result += '\n';
+        }
+        result += tmp;
+    }
+
+
+    return result;
+}
+
 function parseEnvironmentVariablesString(environmentVariablesString: string) {
     const items = getEnvironmentItems(environmentVariablesString);
 
@@ -178,7 +223,10 @@ function parseEnvironmentVariablesString(environmentVariablesString: string) {
     }, {});
 }
 
-function getEnvironmentItems(environmentVariablesString: string) {
+function getEnvironmentItems(environmentVariablesString: string): {
+    name: string,
+    value: string
+}[] {
     try {
         const env: { name: string, value: string, sensitive?: boolean }[] = JSON.parse(
             environmentVariablesString);
@@ -189,16 +237,21 @@ function getEnvironmentItems(environmentVariablesString: string) {
         }
         return env;
     } catch (e) {
-        const items = environmentVariablesString.split('\n').map(x => x.trim())
-                                                .filter(x => !!x.length)
-                                                .map(x => x.split('='));
-        const invalidLines = items.filter(x => x.length === 1);
-        if (invalidLines.length) {
-            throw new Error(`Invalid environment variables received. Input 'environment-variables' needs to be valid JSON or it needs to be lines of the form NAME=value. The following lines are invalid:\n${ invalidLines.join(
-                '\n') }`);
+        const unparsedItems = environmentVariablesString.split('\n').map(x => x.trim())
+                                                        .filter(x => !!x.length);
+
+        if (unparsedItems.length === 0) {
+            return [];
+        }
+        if (unparsedItems.length === 1) {
+            const [ name, ...valueParts ] = unparsedItems[0].split('=');
+            if (!valueParts?.length) {
+                throw new Error(`Invalid environment variables received. Input 'environment-variables' needs to be (a) valid JSON (b) lines where each line is valid JSON or (c) of the form NAME=value.`);
+            }
+            return [ { name, value: valueParts.join('=') } ];
         }
 
-        return items.map(([ name, ...valueParts ]) => ({ name, value: valueParts.join('=') }));
+        return unparsedItems.flatMap(getEnvironmentItems);
     }
 }
 
