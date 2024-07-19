@@ -34475,10 +34475,12 @@ const ResourcesSchema = zod_1.z.object({
     reservations: ResourcesLimitsReservationsSchema.optional()
 });
 const ReplicasSchema = zod_1.z.object({ min: zod_1.z.number(), max: zod_1.z.number().optional() }).optional();
+const ExternalRouteSchema = zod_1.z.object({ port: zod_1.z.number(), domains: zod_1.z.array(zod_1.z.string()) });
 const AdditionalServiceDefinitionAdjustmentsSchema = zod_1.z.object({
     node_type: zod_1.z.string().optional(),
     replicas: ReplicasSchema.optional(),
-    resources: ResourcesSchema.optional()
+    resources: ResourcesSchema.optional(),
+    external_route: ExternalRouteSchema.optional()
 });
 const ServiceDefinitionSchema = zod_1.z.intersection(zod_1.z.object({
     image: zod_1.z.string().optional(),
