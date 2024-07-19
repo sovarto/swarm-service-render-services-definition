@@ -19,11 +19,13 @@ const ResourcesSchema = z.object({
 })
 
 const ReplicasSchema = z.object({min: z.number(), max: z.number().optional()}).optional()
+const ExternalRouteSchema = z.object({port: z.number(), domains: z.array(z.string())})
 
 const AdditionalServiceDefinitionAdjustmentsSchema = z.object({
     node_type: z.string().optional(),
     replicas: ReplicasSchema.optional(),
-    resources: ResourcesSchema.optional()
+    resources: ResourcesSchema.optional(),
+    external_route: ExternalRouteSchema.optional()
 });
 
 const ServiceDefinitionSchema = z.intersection(z.object({

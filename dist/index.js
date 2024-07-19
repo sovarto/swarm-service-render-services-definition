@@ -34259,9 +34259,7 @@ async function run() {
         if (!serviceDefinition.environment) {
             serviceDefinition.environment = [];
         }
-        console.log('before parsing environment variables');
         const environmentVariables = parseEnvironmentVariablesString(getEnvironmentVariablesString(environmentVariablesString, serviceName));
-        console.log('after parsing environment variables');
         const normalizedEnvironmentVariables = normalizeServiceDefinitionEnvironment(serviceDefinition.environment);
         const unusedEnvVars = ensureAllEnvironmentVariables(normalizedEnvironmentVariables, environmentVariables);
         let env = Object.entries(normalizedEnvironmentVariables)
@@ -34363,13 +34361,13 @@ function getEnvironmentVariablesString(environmentVariablesString, serviceName) 
         return environmentVariablesString;
     }
     let result = '';
-    let envName = `${getServiceNameEnvPrefix(serviceName)}SERVICE_DEFINITION_ENVIRONMENT_VARIABLES`;
+    let envName = `${getServiceNameEnvPrefix(serviceName)}_SERVICE_DEFINITION_ENVIRONMENT_VARIABLES`;
     let tmp = process.env[envName];
     if (tmp?.length) {
         console.log(`Using environment variables from ${envName}`);
         result = tmp;
     }
-    envName = `${getServiceNameEnvPrefix(serviceName)}SERVICE_DEFINITION_ENVIRONMENT_VARIABLES_SENSITIVE`;
+    envName = `${getServiceNameEnvPrefix(serviceName)}_SERVICE_DEFINITION_ENVIRONMENT_VARIABLES_SENSITIVE`;
     tmp = process.env[envName];
     if (tmp?.length) {
         if (result.length) {
