@@ -19,7 +19,16 @@ const ResourcesSchema = z.object({
 })
 
 const ReplicasSchema = z.object({min: z.number(), max: z.number().optional()}).optional()
-const ExternalRouteSchema = z.object({port: z.number(), domains: z.array(z.string())})
+const ExternalRouteSchema = z.union([
+    z.object({
+        port: z.number(),
+        subdomain: z.string()
+    }),
+    z.object({
+        port: z.number(),
+        domains: z.array(z.string())
+    })
+]);
 
 const AdditionalServiceDefinitionAdjustmentsSchema = z.object({
     node_type: z.string().optional(),

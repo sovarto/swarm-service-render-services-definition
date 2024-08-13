@@ -34484,7 +34484,16 @@ const ResourcesSchema = zod_1.z.object({
     reservations: ResourcesLimitsReservationsSchema.optional()
 });
 const ReplicasSchema = zod_1.z.object({ min: zod_1.z.number(), max: zod_1.z.number().optional() }).optional();
-const ExternalRouteSchema = zod_1.z.object({ port: zod_1.z.number(), domains: zod_1.z.array(zod_1.z.string()) });
+const ExternalRouteSchema = zod_1.z.union([
+    zod_1.z.object({
+        port: zod_1.z.number(),
+        subdomain: zod_1.z.string()
+    }),
+    zod_1.z.object({
+        port: zod_1.z.number(),
+        domains: zod_1.z.array(zod_1.z.string())
+    })
+]);
 const AdditionalServiceDefinitionAdjustmentsSchema = zod_1.z.object({
     node_type: zod_1.z.string().optional(),
     replicas: ReplicasSchema.optional(),
