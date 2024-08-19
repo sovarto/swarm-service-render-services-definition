@@ -77,7 +77,7 @@
     "jest": "^29.7.0",
     "linefix": "^0.1.1",
     "make-coverage-badge": "^1.2.0",
-    "ts-jest": "^29.1.2",
-    "typescript": "^5.5.3"
+    "ts-jest": "^29.2.4",
+    "typescript": "^5.5.4"
   }
 }
